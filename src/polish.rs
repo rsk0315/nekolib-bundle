@@ -224,3 +224,58 @@ macro_rules! foo {
     eprintln!("{expected}");
     assert_eq!(actual.to_string(), expected.to_string());
 }
+
+#[test]
+fn macro_fmt() {
+    use syn::{spanned::Spanned, visit::Visit};
+
+    let original = r#"
+macro_rules! foo {
+    ( $($ty:ty)* ) => { $(
+        impl Foo for $ty {
+            fn foo(self) -> $ty {
+                0 as $ty
+            }
+        }
+    )* }
+}
+
+fn bar() {}
+
+macro_rules! baz {
+    () => {}
+}
+"#;
+
+    struct VisitItemMacro {
+        spans: Vec<proc_macro2::Span>,
+    }
+
+    impl<'ast> Visit<'ast> for VisitItemMacro {
+        fn visit_item_macro(&mut self, node: &'ast syn::ItemMacro) {
+            eprintln!("{:?}", node.ident);
+            eprintln!("{:?}", node.mac.span());
+            self.spans.push(node.mac.span());
+        }
+    }
+
+    let file = syn::parse_file(&original).unwrap();
+    let mut vim = VisitItemMacro { spans: vec![] };
+    vim.visit_file(&file);
+    for span in vim.spans {
+        eprintln!("{span:?}; {:?}..{:?}", span.start(), span.end());
+        eprintln!("{}", span.source_text().unwrap());
+    }
+
+    let ts = original.parse::<proc_macro2::TokenStream>().unwrap();
+    let splitted = ts.to_string();
+    println!("{splitted}");
+
+    let file = syn::parse_file(&splitted).unwrap();
+    let mut vim = VisitItemMacro { spans: vec![] };
+    vim.visit_file(&file);
+    for span in vim.spans {
+        eprintln!("{span:?}; {:?}..{:?}", span.start(), span.end());
+        eprintln!("{}", span.source_text().unwrap());
+    }
+}
