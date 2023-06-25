@@ -4,6 +4,7 @@ use clap::Parser;
 
 use nekolib_bundle::{
     library::{Library, LIB_PATH_DEFAULT},
+    metadata::Metadata,
     source::Source,
 };
 
@@ -29,8 +30,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let source = Source::new(std::fs::read_to_string(&args.source_path)?);
     let library = Library::traverse(&args.lib_path())?;
+    let metadata = Metadata::fetch(&args.lib_path())?;
 
-    println!("{}", library.bundle(&source));
+    println!("{}", library.bundle(&source, &metadata));
 
     Ok(())
 }

@@ -4,7 +4,7 @@ use std::string::ToString;
 
 use syn::{parse_file, Item};
 
-use crate::{polish::polish_library, source::Source};
+use crate::{metadata::Metadata, polish::polish_library, source::Source};
 
 pub const LIBRARY_NAME: &'static str = "nekolib";
 pub const LIB_PATH_DEFAULT: &'static str = "~/git/rsk0315/nekolib/nekolib-doc";
@@ -102,7 +102,7 @@ impl Library {
         Ok(Self { ident_crate, crate_path, deps_1, deps_oo })
     }
 
-    pub fn bundle(&self, source: &Source) -> String {
+    pub fn bundle(&self, source: &Source, metadata: &Metadata) -> String {
         // {[foo] => [foo1, ...], ...}
         let required = self.required(&source.get_uses());
 
@@ -110,8 +110,14 @@ impl Library {
         let mut res = source.get_code().to_owned();
 
         if !required.is_empty() {
-            // metadata, commit hash, comments, ...
-
+            res += &format!(
+                r#"
+/// This module is bundled automatically.
+/// See <https://rsk0315.github.io/nekolib/nekolib_doc/index.html> for documentation.
+/// Commit: {}
+"#,
+                metadata.get_commit()
+            );
             res += &format!("pub mod {LIBRARY_NAME} {{");
             for (cat, v) in required {
                 res += &format!("pub mod {cat} {{\n");
