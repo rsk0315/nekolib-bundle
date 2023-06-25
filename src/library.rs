@@ -54,6 +54,7 @@ pub struct Library {
     crate_path: BTreeMap<Crate, PathBuf>,
     deps_1: BTreeMap<Crate, Vec<Crate>>,
     deps_oo: BTreeMap<Crate, BTreeSet<Crate>>,
+    macro_exports: BTreeMap<Crate, Vec<String>>,
 }
 
 impl Library {
@@ -66,6 +67,8 @@ impl Library {
 
         // [foo::foo1] -> nekolib-src/foo/foo1/src/lib.rs
         let mut crate_path = BTreeMap::new();
+
+        let mut macro_exports = BTreeMap::new();
 
         // path: nekolib-doc
         for (k0, v0) in dependency_paths(path.join("Cargo.toml")) {
@@ -81,6 +84,7 @@ impl Library {
                     deps_1.entry(foo.clone()).or_insert(vec![]).push(bar);
                 }
 
+                let mut mx = vec![];
                 // nekolib-src/foo_category/foo_crate/src/lib.rs
                 for item in export_items(v1.join("src/lib.rs")) {
                     ident_crate.insert(
@@ -91,15 +95,24 @@ impl Library {
                         vec![k0.clone(), k1.clone(), item.to_string()],
                         foo.clone(),
                     );
+                    if let UseIdent::MacroExport(s) = &item {
+                        mx.push(s.to_owned());
+                    }
                 }
-
+                macro_exports.insert(foo.clone(), mx);
                 crate_path.insert(foo, v1.join("src/lib.rs"));
             }
         }
 
         let deps_oo = transitive(&deps_1);
 
-        Ok(Self { ident_crate, crate_path, deps_1, deps_oo })
+        Ok(Self {
+            ident_crate,
+            crate_path,
+            deps_1,
+            deps_oo,
+            macro_exports,
+        })
     }
 
     pub fn bundle(&self, source: &Source, metadata: &Metadata) -> String {
@@ -135,15 +148,17 @@ impl Library {
                     }
 
                     res += &bundle_file(&path);
-                    if cat == "macros" {
-                        res += &format!("        pub(crate) use {cr};\n");
-                        res += &format!("    }}\n");
-                        res += &format!("    #[allow(unused_imports)]\n");
-                        res += &format!("    pub use {cr}::*;\n");
-                    } else {
-                        res += &format!("    }}\n");
-                        res += &format!("    pub use {cr}::*;\n");
+
+                    if let Some(mx) = self.macro_exports.get(&key) {
+                        if !mx.is_empty() {
+                            let mx = mx.join(", ");
+                            res +=
+                                &format!("        pub(crate) use {{{mx}}};\n");
+                        }
                     }
+                    res += &format!("    }}\n");
+                    res += &format!("    #[allow(unused_imports)]\n");
+                    res += &format!("    pub use {cr}::*;\n");
                 }
                 res += &format!("}}\n");
             }
