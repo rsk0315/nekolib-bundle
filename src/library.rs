@@ -6,6 +6,7 @@ use syn::{parse_file, Item};
 
 use crate::{polish::polish_library, source::Source};
 
+pub const LIBRARY_NAME: &'static str = "nekolib";
 pub const LIB_PATH_DEFAULT: &'static str = "~/git/rsk0315/nekolib/nekolib-doc";
 
 #[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
@@ -51,13 +52,14 @@ pub struct Library {
     // path: PathBuf,
     ident_crate: BTreeMap<Vec<String>, Crate>,
     crate_path: BTreeMap<Crate, PathBuf>,
-    deps: BTreeMap<Crate, BTreeSet<Crate>>,
+    deps_1: BTreeMap<Crate, Vec<Crate>>,
+    deps_oo: BTreeMap<Crate, BTreeSet<Crate>>,
 }
 
 impl Library {
     pub fn traverse(path: &Path) -> Result<Self, Box<dyn std::error::Error>> {
         // [foo::foo2] -> [foo::foo1, ...] <=> foo::foo2 depends on foo::foo1
-        let mut deps1 = BTreeMap::new();
+        let mut deps_1 = BTreeMap::new();
 
         // [foo1_fn] -> foo::foo1 <=> foo::foo1 exports foo1_fn
         let mut ident_crate = BTreeMap::new();
@@ -76,8 +78,7 @@ impl Library {
                     let bar = Crate::from_path(&v2);
 
                     // foo_crate depends on bar_crate
-                    eprintln!("{} -> {}", foo, bar);
-                    deps1.entry(foo.clone()).or_insert(vec![]).push(bar);
+                    deps_1.entry(foo.clone()).or_insert(vec![]).push(bar);
                 }
 
                 // nekolib-src/foo_category/foo_crate/src/lib.rs
@@ -96,9 +97,9 @@ impl Library {
             }
         }
 
-        let deps = transitive(&deps1);
+        let deps_oo = transitive(&deps_1);
 
-        Ok(Self { ident_crate, deps, crate_path })
+        Ok(Self { ident_crate, crate_path, deps_1, deps_oo })
     }
 
     pub fn bundle(&self, source: &Source) -> String {
@@ -111,23 +112,36 @@ impl Library {
         if !required.is_empty() {
             // metadata, commit hash, comments, ...
 
+            res += &format!("pub mod {LIBRARY_NAME} {{");
             for (cat, v) in required {
                 res += &format!("pub mod {cat} {{\n");
                 for (cr, path) in v {
                     res += &format!("    pub mod {cr} {{\n");
 
+                    let key = Crate::new(cat.clone(), cr.clone());
+                    if let Some(deps_1) = self.deps_1.get(&key) {
+                        for dep in deps_1 {
+                            res += &format!(
+                                "        use crate::{LIBRARY_NAME}::{}::{};",
+                                dep.category_name, dep.crate_name,
+                            )
+                        }
+                    }
+
                     res += &bundle_file(&path);
                     if cat == "macros" {
-                        res += &format!("        pub(crate) {cr};\n");
+                        res += &format!("        pub(crate) use {cr};\n");
                         res += &format!("    }}\n");
                         res += &format!("    #[allow(unused_imports)]\n");
                         res += &format!("    pub use {cr}::*;\n");
                     } else {
                         res += &format!("    }}\n");
+                        res += &format!("    pub use {cr}::*;\n");
                     }
                 }
                 res += &format!("}}\n");
             }
+            res += &format!("}}\n");
         }
 
         res
@@ -141,7 +155,7 @@ impl Library {
         for u in uses {
             let cr = self.ident_crate[u].clone();
             bundled.push(cr.clone());
-            if let Some(deps) = self.deps.get(&cr) {
+            if let Some(deps) = self.deps_oo.get(&cr) {
                 bundled.extend(deps.iter().cloned());
             }
         }

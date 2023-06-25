@@ -4,15 +4,16 @@ use syn::{parse_file, visit_mut::VisitMut};
 pub fn polish_library(src: &str) -> String {
     let mut ast = parse_file(src).unwrap();
 
-    remove_doc_attrs(&mut ast.attrs);
+    remove_attrs_by_ident(&mut ast.attrs, "doc");
     remove_test_items(&mut ast.items);
     remove_doc_comments(&mut ast);
+    remove_macro_exports(&mut ast);
 
     (quote! { #ast }).to_string()
 }
 
-fn remove_doc_attrs(attrs: &mut Vec<syn::Attribute>) {
-    attrs.retain(|attr| !attr.meta.path().is_ident("doc"));
+fn remove_attrs_by_ident(attrs: &mut Vec<syn::Attribute>, ident: &str) {
+    attrs.retain(|attr| !attr.meta.path().is_ident(ident));
 }
 
 fn remove_test_items(items: &mut Vec<syn::Item>) {
@@ -43,8 +44,6 @@ struct RemoveDocComments;
 
 impl VisitMut for RemoveDocComments {
     fn visit_item_mut(&mut self, node: &mut syn::Item) {
-        eprintln!("visited: {}", quote! { #node });
-
         let attrs = match node {
             syn::Item::Const(item) => &mut item.attrs,
             syn::Item::Enum(item) => &mut item.attrs,
@@ -76,12 +75,10 @@ impl VisitMut for RemoveDocComments {
             _ => unimplemented!(),
         };
 
-        remove_doc_attrs(attrs);
+        remove_attrs_by_ident(attrs, "doc");
     }
 
     fn visit_impl_item_mut(&mut self, node: &mut syn::ImplItem) {
-        eprintln!("visited: {}", quote! { #node });
-
         let attrs = match node {
             syn::ImplItem::Const(item) => &mut item.attrs,
             syn::ImplItem::Fn(item) => &mut item.attrs,
@@ -90,12 +87,24 @@ impl VisitMut for RemoveDocComments {
             _ => unimplemented!(),
         };
 
-        remove_doc_attrs(attrs);
+        remove_attrs_by_ident(attrs, "doc");
     }
 }
 
 fn remove_doc_comments(ast: &mut syn::File) {
     RemoveDocComments.visit_file_mut(ast);
+}
+
+struct RemoveMacroExports;
+
+impl VisitMut for RemoveMacroExports {
+    fn visit_item_macro_mut(&mut self, node: &mut syn::ItemMacro) {
+        remove_attrs_by_ident(&mut node.attrs, "macro_export");
+    }
+}
+
+fn remove_macro_exports(ast: &mut syn::File) {
+    RemoveMacroExports.visit_file_mut(ast);
 }
 
 fn is_test_attr(attr: &syn::Attribute) -> bool {
@@ -178,6 +187,32 @@ mod libs {
     }
 }
 "#;
+
+    let actual = parse_file(&actual).unwrap();
+    let expected = parse_file(&expected).unwrap();
+
+    let actual = TokenStream::from(quote! { #actual });
+    let expected = TokenStream::from(quote! { #expected });
+
+    eprintln!("{actual}");
+    eprintln!("{expected}");
+    assert_eq!(actual.to_string(), expected.to_string());
+}
+
+#[test]
+fn macro_export() {
+    use proc_macro2::TokenStream;
+    use quote::quote;
+
+    let src = r#"
+#[macro_export]
+macro_rules! foo {
+    () => {}
+}
+"#;
+
+    let actual = polish_library(src);
+    let expected = "macro_rules! foo { () => {} }";
 
     let actual = parse_file(&actual).unwrap();
     let expected = parse_file(&expected).unwrap();

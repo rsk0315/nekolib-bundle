@@ -27,10 +27,7 @@ impl Args {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
 
-    eprintln!("source file: {:?}", args.source_path);
     let source = Source::new(std::fs::read_to_string(&args.source_path)?);
-
-    eprintln!("lib path: {:?}", args.lib_path());
     let library = Library::traverse(&args.lib_path())?;
 
     println!("{}", library.bundle(&source));
