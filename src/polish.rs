@@ -229,7 +229,7 @@ macro_rules! foo {
 fn macro_fmt() {
     use syn::{spanned::Spanned, visit::Visit};
 
-    let original = r#"
+    let original = r##"
 macro_rules! foo {
     ( $($ty:ty)* ) => { $(
         impl Foo for $ty {
@@ -243,9 +243,12 @@ macro_rules! foo {
 fn bar() {}
 
 macro_rules! baz {
-    () => {}
+    () => { r#"..
+..
+.."#
+    }
 }
-"#;
+"##;
 
     struct VisitItemMacro {
         spans: Vec<proc_macro2::Span>,
@@ -279,3 +282,26 @@ macro_rules! baz {
         eprintln!("{}", span.source_text().unwrap());
     }
 }
+
+/*
+macro_rules ! foo { ($ ($ ty : ty) *) => { $ (impl Foo for $ ty { fn foo (self) -> $ ty { 0 as $ ty } }) * } } fn bar () { } macro_rules ! baz { () => { r#"..
+..
+.."# } }
+ */
+
+/*
+macro_rules! foo {
+    ( $($ty:ty)* ) => { $(
+        impl Foo for $ty {
+            fn foo(self) -> $ty {
+                0 as $ty
+            }
+        }
+    )* }
+} fn bar () { } macro_rules! baz {
+    () => { r#"..
+..
+.."#
+    }
+}
+*/
