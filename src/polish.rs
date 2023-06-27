@@ -1,5 +1,5 @@
 use quote::quote;
-use syn::{parse_file, visit_mut::VisitMut};
+use syn::{parse_file, spanned::Spanned, visit_mut::VisitMut};
 
 pub fn polish_library(src: &str) -> String {
     let mut ast = parse_file(src).unwrap();
@@ -9,7 +9,31 @@ pub fn polish_library(src: &str) -> String {
     remove_doc_comments(&mut ast);
     remove_macro_exports(&mut ast);
 
-    (quote! { #ast }).to_string()
+    restore_macro_sources(&ast)
+}
+
+fn restore_macro_sources(ast: &syn::File) -> String {
+    let src_tk = (quote! { #ast }).to_string();
+    let ast_tk = parse_file(&src_tk).unwrap();
+
+    let mut res = "".to_owned();
+    for (item, item_tk) in ast.items.iter().zip(&ast_tk.items) {
+        if let syn::Item::Macro(item) = item {
+            if !res.is_empty() && !res.ends_with("\n") {
+                res += "\n";
+            }
+            res += &item
+                .span()
+                .source_text()
+                .unwrap()
+                .replace("\n", &format!("{:<13}", '\n'));
+            res += "\n";
+        } else {
+            res += &item_tk.span().source_text().unwrap();
+        }
+    }
+
+    res
 }
 
 fn remove_attrs_by_ident(attrs: &mut Vec<syn::Attribute>, ident: &str) {
