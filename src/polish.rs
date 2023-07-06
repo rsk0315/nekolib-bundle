@@ -1,7 +1,9 @@
 use quote::quote;
 use syn::{parse_file, spanned::Spanned, visit_mut::VisitMut};
 
-pub fn polish_library(src: &str) -> String {
+use crate::library::LIBRARY_NAME;
+
+pub fn polish_library(src: &str, cat: &str, cr: &str) -> String {
     let src_ascii: String = src.chars().filter(|&c| c.is_ascii()).collect();
     let mut ast = parse_file(&src_ascii).unwrap();
 
@@ -10,13 +12,14 @@ pub fn polish_library(src: &str) -> String {
     remove_test_items(&mut ast.items);
     remove_macro_exports(&mut ast);
 
-    restore_macro_sources(&ast)
+    restore_macro_sources(&ast, cat, cr)
 }
 
-fn restore_macro_sources(ast: &syn::File) -> String {
+fn restore_macro_sources(ast: &syn::File, cat: &str, cr: &str) -> String {
     let src_tk = (quote! { #ast }).to_string();
     let ast_tk = parse_file(&src_tk).unwrap();
 
+    let crate_path = format!("$crate::{LIBRARY_NAME}::{cat}::{cr}::");
     let mut res = "".to_owned();
     for (item, item_tk) in ast.items.iter().zip(&ast_tk.items) {
         if let syn::Item::Macro(item) = item {
@@ -27,7 +30,8 @@ fn restore_macro_sources(ast: &syn::File) -> String {
                 .span()
                 .source_text()
                 .unwrap()
-                .replace("\n", &format!("{:<13}", '\n'));
+                .replace("\n", &format!("{:<13}", '\n'))
+                .replace("$crate::", &crate_path);
             res += "\n";
         } else {
             res += &item_tk.span().source_text().unwrap();

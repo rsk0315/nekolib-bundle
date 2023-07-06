@@ -147,7 +147,7 @@ impl Library {
                         }
                     }
 
-                    res += &bundle_file(&path);
+                    res += &bundle_file(&path, &cat, &cr);
 
                     if let Some(mx) = self.macro_exports.get(&key) {
                         if !mx.is_empty() {
@@ -317,6 +317,6 @@ fn tsort(
     res.into_iter()
 }
 
-fn bundle_file(path: &Path) -> String {
-    polish_library(&std::fs::read_to_string(path).unwrap())
+fn bundle_file(path: &Path, cat: &str, cr: &str) -> String {
+    polish_library(&std::fs::read_to_string(path).unwrap(), cat, cr)
 }
