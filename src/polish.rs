@@ -2,11 +2,12 @@ use quote::quote;
 use syn::{parse_file, spanned::Spanned, visit_mut::VisitMut};
 
 pub fn polish_library(src: &str) -> String {
-    let mut ast = parse_file(src).unwrap();
+    let src_ascii: String = src.chars().filter(|&c| c.is_ascii()).collect();
+    let mut ast = parse_file(&src_ascii).unwrap();
 
     remove_attrs_by_ident(&mut ast.attrs, "doc");
-    remove_test_items(&mut ast.items);
     remove_doc_comments(&mut ast);
+    remove_test_items(&mut ast.items);
     remove_macro_exports(&mut ast);
 
     restore_macro_sources(&ast)
