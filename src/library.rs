@@ -128,6 +128,7 @@ impl Library {
 /// This module is bundled automatically.
 /// See <https://rsk0315.github.io/nekolib/nekolib_doc/index.html> for documentation.
 /// Commit: {}
+#[allow(unused)]
 "#,
                 metadata.get_commit()
             );
