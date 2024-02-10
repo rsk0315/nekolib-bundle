@@ -1,6 +1,8 @@
-use std::collections::{BTreeMap, BTreeSet, VecDeque};
-use std::path::{Path, PathBuf};
-use std::string::ToString;
+use std::{
+    collections::{BTreeMap, BTreeSet, VecDeque},
+    path::{Path, PathBuf},
+    string::ToString,
+};
 
 use syn::{parse_file, Item};
 
