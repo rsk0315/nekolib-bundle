@@ -193,7 +193,7 @@ mod tests {
 }
 "#;
 
-    let actual = polish_library(src);
+    let actual = polish_library(src, "", "");
     let expected = r#"
 #[allow(unused)]
 fn one(x: i32) -> i32 { 1 }
@@ -240,7 +240,7 @@ macro_rules! foo {
 }
 "#;
 
-    let actual = polish_library(src);
+    let actual = polish_library(src, "", "");
     let expected = "macro_rules! foo { () => {} }";
 
     let actual = parse_file(&actual).unwrap();
