@@ -34,7 +34,10 @@ impl Source {
     }
 }
 
-fn dfs_use_tree(u: &syn::UseTree, cur: &mut Vec<String>) -> Vec<Vec<String>> {
+pub fn dfs_use_tree(
+    u: &syn::UseTree,
+    cur: &mut Vec<String>,
+) -> Vec<Vec<String>> {
     fn dfs(
         u: &syn::UseTree,
         cur: &mut Vec<String>,
