@@ -5,6 +5,8 @@ use std::{
 
 use syn::{parse_file, spanned::Spanned};
 
+use crate::polish::polish_library;
+
 pub fn resolve_nested_mod(path: &Path) -> String {
     // When we find `mod foo;`, we should read the corresponding file
     // (see <https://doc.rust-lang.org/reference/items/modules.html>)
@@ -37,7 +39,8 @@ pub fn resolve_nested_mod(path: &Path) -> String {
         }
         src_resolved += &text;
     }
-    src_resolved
+
+    polish_library(&src_resolved, "", "")
 }
 
 pub fn resolve_mod_source(
