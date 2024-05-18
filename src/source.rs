@@ -34,7 +34,10 @@ impl Source {
     }
 }
 
-fn dfs_use_tree(u: &syn::UseTree, cur: &mut Vec<String>) -> Vec<Vec<String>> {
+pub fn dfs_use_tree(
+    u: &syn::UseTree,
+    cur: &mut Vec<String>,
+) -> Vec<Vec<String>> {
     fn dfs(
         u: &syn::UseTree,
         cur: &mut Vec<String>,
@@ -52,7 +55,7 @@ fn dfs_use_tree(u: &syn::UseTree, cur: &mut Vec<String>) -> Vec<Vec<String>> {
                 cur.pop();
             }
             syn::UseTree::Rename(ref rename) => {
-                cur.push(rename.ident.to_string());
+                cur.push(rename.rename.to_string());
                 res.push(cur.clone());
                 cur.pop();
             }

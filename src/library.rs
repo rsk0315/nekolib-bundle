@@ -6,7 +6,12 @@ use std::{
 
 use syn::{parse_file, Item};
 
-use crate::{metadata::Metadata, polish::polish_library, source::Source};
+use crate::{
+    metadata::Metadata,
+    polish::polish_library,
+    resolve::resolve_nested_mod,
+    source::{dfs_use_tree, Source},
+};
 
 pub const LIBRARY_NAME: &'static str = "nekolib";
 pub const LIB_PATH_DEFAULT: &'static str = "~/git/rsk0315/nekolib/nekolib-doc";
@@ -234,6 +239,17 @@ fn export_items(src_lib_path: impl AsRef<Path>) -> Vec<UseIdent> {
             Item::TraitAlias(item) => (item.vis, item.ident),
             Item::Type(item) => (item.vis, item.ident),
             Item::Union(item) => (item.vis, item.ident),
+            Item::Use(item) => {
+                let mut cur = vec![];
+                let tmp = dfs_use_tree(&item.tree, &mut cur);
+                if is_pub(item.vis) {
+                    for u in tmp {
+                        let ident = u.last().unwrap().to_string();
+                        res.push(UseIdent::PubItem(ident));
+                    }
+                }
+                continue;
+            }
 
             Item::Macro(item) => {
                 if is_exported(&item.attrs) {
@@ -321,5 +337,6 @@ fn tsort(
 }
 
 fn bundle_file(path: &Path, cat: &str, cr: &str) -> String {
-    polish_library(&std::fs::read_to_string(path).unwrap(), cat, cr)
+    let expanded = resolve_nested_mod(path);
+    polish_library(&expanded, cat, cr)
 }
