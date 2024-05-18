@@ -182,7 +182,7 @@ impl Library {
     ) -> BTreeMap<String, Vec<(String, PathBuf)>> {
         let mut bundled = vec![];
         for u in uses {
-            let cr = self.ident_crate[u].clone();
+            let cr = self.ident_crate.get(u).cloned().expect(&format!("{u:?}"));
             bundled.push(cr.clone());
             if let Some(deps) = self.deps_oo.get(&cr) {
                 bundled.extend(deps.iter().cloned());
