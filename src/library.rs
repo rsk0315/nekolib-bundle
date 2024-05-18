@@ -9,6 +9,7 @@ use syn::{parse_file, Item};
 use crate::{
     metadata::Metadata,
     polish::polish_library,
+    resolve::resolve_nested_mod,
     source::{dfs_use_tree, Source},
 };
 
@@ -336,5 +337,6 @@ fn tsort(
 }
 
 fn bundle_file(path: &Path, cat: &str, cr: &str) -> String {
-    polish_library(&std::fs::read_to_string(path).unwrap(), cat, cr)
+    let expanded = resolve_nested_mod(path);
+    polish_library(&expanded, cat, cr)
 }
