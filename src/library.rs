@@ -4,13 +4,13 @@ use std::{
     string::ToString,
 };
 
-use syn::{parse_file, Item};
+use syn::{Item, parse_file};
 
 use crate::{
     metadata::Metadata,
     polish::polish_library,
     resolve::resolve_nested_mod,
-    source::{dfs_use_tree, Source},
+    source::{Source, dfs_use_tree},
 };
 
 pub const LIBRARY_NAME: &'static str = "nekolib";

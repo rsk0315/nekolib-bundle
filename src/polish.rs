@@ -26,12 +26,16 @@ fn restore_macro_sources(ast: &syn::File, cat: &str, cr: &str) -> String {
             if !res.is_empty() && !res.ends_with("\n") {
                 res += "\n";
             }
-            res += &item
+            let tmp = item
                 .span()
                 .source_text()
                 .unwrap()
-                .replace("\n", &format!("{:<13}", '\n'))
-                .replace("$crate::", &crate_path);
+                .replace("\n", &format!("{:<13}", '\n'));
+            if !cat.is_empty() && !cr.is_empty() {
+                res += &tmp.replace("$crate::", &crate_path);
+            } else {
+                res += &tmp;
+            }
             res += "\n";
         } else {
             res += &item_tk.span().source_text().unwrap();
