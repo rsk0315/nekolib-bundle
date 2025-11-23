@@ -1,0 +1,35 @@
+diff --git a/src/library.rs b/src/library.rs
+index 22db0c5..57d2b9c 100644
+--- a/src/library.rs
++++ b/src/library.rs
+@@ -161,13 +161,14 @@ impl Library {
+                     if let Some(mx) = self.macro_exports.get(&key) {
+                         if !mx.is_empty() {
+                             let mx = mx.join(", ");
+-                            res +=
+-                                &format!("        pub(crate) use {{{mx}}};\n");
++                            res += &format!(
++                                "        pub(crate) use ::{{{mx}}};\n"
++                            );
+                         }
+                     }
+                     res += &format!("    }}\n");
+                     res += &format!("    #[allow(unused_imports)]\n");
+-                    res += &format!("    pub use {cr}::*;\n");
++                    res += &format!("    pub use self::{cr}::*;\n");
+                 }
+                 res += &format!("}}\n");
+             }
+diff --git a/src/polish.rs b/src/polish.rs
+index 800c9a1..db2068c 100644
+--- a/src/polish.rs
++++ b/src/polish.rs
+@@ -10,7 +10,7 @@ pub fn polish_library(src: &str, cat: &str, cr: &str) -> String {
+     remove_attrs_by_ident(&mut ast.attrs, "doc");
+     remove_doc_comments(&mut ast);
+     remove_test_items(&mut ast.items);
+-    remove_macro_exports(&mut ast);
++    // remove_macro_exports(&mut ast);
+ 
+     restore_macro_sources(&ast, cat, cr)
+ }
